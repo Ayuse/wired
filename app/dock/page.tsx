@@ -68,14 +68,12 @@ const DockItem = ({
   let widthSync = useTransform(distance, [-200, 0, 200], [40, 80, 40]);
   let width = useSpring(widthSync, { damping: 15, stiffness: 300, mass: 0.1 });
   const iconWidth = width.get() - 15;
-  console.log(width.get());
   return (
     <motion.div
       style={{ width, height: width }}
       ref={itemRef}
       key={index}
       className="h-10 w-10 bg-dark-grey rounded-full cursor-pointer flex items-center justify-center"
-      onClick={() => console.log("object")}
     >
       <item.icon width={iconWidth} />
     </motion.div>
