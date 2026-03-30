@@ -60,7 +60,7 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        gap: "1.5rem",
+        gap: "16rem",
         pointerEvents: exiting ? "none" : "auto",
       }}
     >
@@ -75,7 +75,7 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
             fontWeight: 400,
             color: "#000",
             transform: exiting ? "translateY(-110%)" : textVisible ? "translateY(0)" : "translateY(110%)",
-            transition: "transform 0.6s cubic-bezier(0.7, 0, 1, 1)",
+            transition: "transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
           }}
         >
           LOADING
@@ -83,7 +83,7 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
       </div>
 
       {/* Number — bottom-to-top reveal with mask */}
-      <div style={{ overflow: "hidden", lineHeight: 1 }}>
+      <div style={{ overflow: "hidden", lineHeight: 1, minWidth: "3ch" }}>
         <span
           style={{
             display: "block",
@@ -91,9 +91,10 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
             letterSpacing: "0.02em",
             fontFamily: "sans-serif",
             fontWeight: 400,
+            fontVariantNumeric: "tabular-nums",
             color: "#000",
             transform: exiting ? "translateY(-110%)" : numberVisible ? "translateY(0)" : "translateY(110%)",
-            transition: "transform 0.6s cubic-bezier(0.7, 0, 1, 1)",
+            transition: "transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
           }}
         >
           {progress}

@@ -29,18 +29,18 @@ const MEDIA = [
 ];
 
 export default function Home() {
-  const [loaded, setLoaded] = useState(false);
+  const [loadingDone, setLoadingDone] = useState(false);
   const [svgDone, setSvgDone] = useState(false);
 
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden" }}>
-      <TransitionSVG onComplete={() => setSvgDone(true)} />
-      {svgDone && !loaded && <LoadingScreen onComplete={() => setLoaded(true)} />}
+      {!loadingDone && <LoadingScreen onComplete={() => setLoadingDone(true)} />}
+      {loadingDone && !svgDone && <TransitionSVG onComplete={() => setSvgDone(true)} />}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          opacity: loaded ? 1 : 0,
+          opacity: svgDone ? 1 : 0,
           transition: "opacity 0.7s ease",
         }}
       >
@@ -48,7 +48,7 @@ export default function Home() {
           media={MEDIA}
           backgroundColor="#f8f8f8"
           fogColor="#f8f8f8"
-          playIntro={loaded}
+          playIntro={svgDone}
         />
       </div>
     </div>
