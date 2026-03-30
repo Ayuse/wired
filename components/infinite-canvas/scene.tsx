@@ -31,6 +31,9 @@ import { useIsTouchDevice } from "./use-is-touch-device";
 
 const PLANE_GEOMETRY = new THREE.PlaneGeometry(1, 1);
 
+// Shared ref that gates per-image intro animations until the canvas is revealed
+const IntroAllowedContext = React.createContext<React.RefObject<boolean>>({ current: false });
+
 const KEYBOARD_MAP = [
   { name: "forward", keys: ["w", "W", "ArrowUp"] },
   { name: "backward", keys: ["s", "S", "ArrowDown"] },
@@ -72,6 +75,7 @@ function MediaPlane({
   chunkCy,
   chunkCz,
   cameraGridRef,
+  introDelay = 0,
 }: {
   position: THREE.Vector3;
   scale: THREE.Vector3;
@@ -80,13 +84,16 @@ function MediaPlane({
   chunkCy: number;
   chunkCz: number;
   cameraGridRef: React.RefObject<CameraGridState>;
+  introDelay?: number;
 }) {
   const meshRef = React.useRef<THREE.Mesh>(null);
   const materialRef = React.useRef<THREE.MeshBasicMaterial>(null);
-  const localState = React.useRef({ opacity: 0, frame: 0, ready: false });
+  const localState = React.useRef({ opacity: 0, frame: 0, ready: false, introProgress: 0, delayFrames: 0 });
+  const introAllowed = React.useContext(IntroAllowedContext);
 
   const [texture, setTexture] = React.useState<THREE.Texture | null>(null);
   const [isReady, setIsReady] = React.useState(false);
+  const displayScaleRef = React.useRef<THREE.Vector3 | null>(null);
 
   useFrame(() => {
     const material = materialRef.current;
@@ -96,6 +103,19 @@ function MediaPlane({
     if (!material || !mesh) return;
 
     state.frame = (state.frame + 1) & 1;
+
+    // Advance intro animation only after the canvas has been revealed + stagger delay
+    if (state.ready && introAllowed.current) {
+      if (state.delayFrames < introDelay) {
+        state.delayFrames++;
+      } else if (state.introProgress < 1) {
+        state.introProgress = Math.min(1, state.introProgress + 0.018);
+      }
+    }
+    const t = state.introProgress;
+    // Ease-out cubic: fast start, smooth finish
+    const introFactor = t >= 1 ? 1 : 1 - Math.pow(1 - t, 3);
+    const introScale = 0.85 + 0.15 * introFactor;
 
     if (state.opacity < INVIS_THRESHOLD && !mesh.visible && state.frame === 0) {
       return;
@@ -142,10 +162,17 @@ function MediaPlane({
         ? 0
         : lerp(state.opacity, target, 0.18);
 
-    const isFullyOpaque = state.opacity > 0.99;
-    material.opacity = isFullyOpaque ? 1 : state.opacity;
+    const finalOpacity = state.opacity * introFactor;
+    const isFullyOpaque = finalOpacity > 0.99;
+    material.opacity = isFullyOpaque ? 1 : finalOpacity;
     material.depthWrite = isFullyOpaque;
-    mesh.visible = state.opacity > INVIS_THRESHOLD;
+    mesh.visible = finalOpacity > INVIS_THRESHOLD;
+
+    // Apply intro scale animation
+    if (t < 1 && displayScaleRef.current) {
+      const ds = displayScaleRef.current;
+      mesh.scale.set(ds.x * introScale, ds.y * introScale, 1);
+    }
   });
 
   const displayScale = React.useMemo(() => {
@@ -160,6 +187,8 @@ function MediaPlane({
     const state = localState.current;
     state.ready = false;
     state.opacity = 0;
+    state.introProgress = 0;
+    state.delayFrames = 0;
     setIsReady(false);
 
     const material = materialRef.current;
@@ -176,6 +205,10 @@ function MediaPlane({
 
     setTexture(tex);
   }, [media]);
+
+  React.useEffect(() => {
+    displayScaleRef.current = displayScale;
+  }, [displayScale]);
 
   React.useEffect(() => {
     const material = materialRef.current;
@@ -249,7 +282,7 @@ function Chunk({
 
   return (
     <group>
-      {planes.map((plane) => {
+      {planes.map((plane, index) => {
         const mediaItem = media[plane.mediaIndex % media.length];
         if (!mediaItem) return null;
 
@@ -263,6 +296,7 @@ function Chunk({
             chunkCy={cy}
             chunkCz={cz}
             cameraGridRef={cameraGridRef}
+            introDelay={index * 4}
           />
         );
       })}
@@ -559,16 +593,25 @@ export function InfiniteCanvasScene({
   fogFar = 320,
   backgroundColor = "#ffffff",
   fogColor = "#ffffff",
+  playIntro = false,
 }: InfiniteCanvasProps) {
   const isTouchDevice = useIsTouchDevice();
   const dpr = Math.min(
     window.devicePixelRatio || 1,
     isTouchDevice ? 1.25 : 1.5
   );
+  const introAllowedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (playIntro) {
+      introAllowedRef.current = true;
+    }
+  }, [playIntro]);
 
   if (!media.length) return null;
 
   return (
+    <IntroAllowedContext.Provider value={introAllowedRef}>
     <KeyboardControls map={KEYBOARD_MAP}>
       <div
         style={{
@@ -626,5 +669,6 @@ export function InfiniteCanvasScene({
         )}
       </div>
     </KeyboardControls>
+    </IntroAllowedContext.Provider>
   );
 }

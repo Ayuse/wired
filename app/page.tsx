@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { InfiniteCanvas } from "@/components/infinite-canvas";
 import { LoadingScreen } from "@/components/loading-screen";
+import { TransitionSVG } from "@/components/transition-svg";
 
 const MEDIA = [
   { url: "https://picsum.photos/seed/a1/1200/800", width: 1200, height: 800 },
@@ -29,15 +30,27 @@ const MEDIA = [
 
 export default function Home() {
   const [loaded, setLoaded] = useState(false);
+  const [svgDone, setSvgDone] = useState(false);
 
   return (
     <div style={{ position: "relative", width: "100vw", height: "100vh", overflow: "hidden" }}>
-      {!loaded && <LoadingScreen onComplete={() => setLoaded(true)} />}
-      <InfiniteCanvas
-        media={MEDIA}
-        backgroundColor="#f8f8f8"
-        fogColor="#f8f8f8"
-      />
+      <TransitionSVG onComplete={() => setSvgDone(true)} />
+      {svgDone && !loaded && <LoadingScreen onComplete={() => setLoaded(true)} />}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          opacity: loaded ? 1 : 0,
+          transition: "opacity 0.7s ease",
+        }}
+      >
+        <InfiniteCanvas
+          media={MEDIA}
+          backgroundColor="#f8f8f8"
+          fogColor="#f8f8f8"
+          playIntro={loaded}
+        />
+      </div>
     </div>
   );
 }
