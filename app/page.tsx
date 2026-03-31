@@ -102,7 +102,7 @@ export default function Home() {
         <div style={{ height: "100vh", pointerEvents: "none" }} />
         <AboutSection />
       </div>
-      <FloatingMenu />
+      <FloatingMenu show={svgDone} />
     </div>
   );
 }

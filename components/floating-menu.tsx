@@ -9,19 +9,19 @@ const contactInfo = ["020 8156 7290", "sales@fluid.glass"];
 
 const ease: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
-export function FloatingMenu() {
+export function FloatingMenu({ show = false }: { show?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <>
       {/* Floating bottom bar */}
       <AnimatePresence>
-        {!isOpen && (
+        {show && !isOpen && (
           <motion.div
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 20, opacity: 0 }}
-            transition={{ duration: 0.5, ease }}
+            transition={{ duration: 0.6, delay: 0.4, ease }}
             style={{
               position: "fixed",
               bottom: 32,
