@@ -6,7 +6,11 @@
       "Bash(yarn add:*)",
       "Bash(yarn build:*)",
       "Bash(npx tsc:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(mkdir -p public/images)",
+      "Bash(cp asset/images/* public/images/)",
+      "Read(//Users/haywire/Documents/wired/**)",
+      "Bash(done)"
     ]
   }
 }

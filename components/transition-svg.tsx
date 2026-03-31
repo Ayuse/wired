@@ -10,14 +10,20 @@ interface TransitionSVGProps {
 export function TransitionSVG({ onComplete }: TransitionSVGProps) {
   const [hidden, setHidden] = useState(false);
   const pathsRef = useRef<SVGPathElement[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (pathsRef.current.length === 0) return;
 
     const tl = gsap.timeline({
       onComplete: () => {
-        setHidden(true);
         onComplete();
+        gsap.to(containerRef.current, {
+          opacity: 0,
+          duration: 0.7,
+          ease: "power1.out",
+          onComplete: () => setHidden(true),
+        });
       },
     });
 
@@ -67,6 +73,7 @@ export function TransitionSVG({ onComplete }: TransitionSVGProps) {
 
   return (
     <div
+      ref={containerRef}
       style={{
         position: "fixed",
         inset: 0,
