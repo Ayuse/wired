@@ -38,10 +38,10 @@ export const generateChunkPlanes = (
   const planes: PlaneData[] = [];
   const seed = hashString(`${cx},${cy},${cz}`);
 
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 3; i++) {
     const s = seed + i * 1000;
     const r = (n: number) => seededRandom(s + n);
-    const size = 12 + r(4) * 8;
+    const size = 24 + r(4) * 16;
 
     planes.push({
       id: `${cx}-${cy}-${cz}-${i}`,

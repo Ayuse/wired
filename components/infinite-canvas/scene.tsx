@@ -31,6 +31,43 @@ import { useIsTouchDevice } from "./use-is-touch-device";
 
 const PLANE_GEOMETRY = new THREE.PlaneGeometry(1, 1);
 
+const ROUNDED_MATERIAL = () =>
+  new THREE.ShaderMaterial({
+    transparent: true,
+    side: THREE.DoubleSide,
+    uniforms: {
+      map: { value: null },
+      opacity: { value: 0 },
+      radius: { value: 0.03 },
+    },
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform sampler2D map;
+      uniform float opacity;
+      uniform float radius;
+      varying vec2 vUv;
+
+      float roundedBox(vec2 p, vec2 b, float r) {
+        vec2 q = abs(p) - b + vec2(r);
+        return min(max(q.x, q.y), 0.0) + length(max(q, 0.0)) - r;
+      }
+
+      void main() {
+        vec2 p = vUv - 0.5;
+        float d = roundedBox(p, vec2(0.5), radius);
+        float alpha = 1.0 - smoothstep(-0.002, 0.002, d);
+        vec4 tex = texture2D(map, vUv);
+        gl_FragColor = vec4(tex.rgb, tex.a * alpha * opacity);
+      }
+    `,
+  });
+
 // Shared ref that gates per-image intro animations until the canvas is revealed
 const IntroAllowedContext = React.createContext<React.RefObject<boolean>>({ current: false });
 
@@ -87,7 +124,8 @@ function MediaPlane({
   introDelay?: number;
 }) {
   const meshRef = React.useRef<THREE.Mesh>(null);
-  const materialRef = React.useRef<THREE.MeshBasicMaterial>(null);
+  const materialRef = React.useRef<THREE.ShaderMaterial>(null);
+  const shaderMaterial = React.useMemo(() => ROUNDED_MATERIAL(), []);
   const localState = React.useRef({ opacity: 0, frame: 0, ready: false, introProgress: 0, delayFrames: 0 });
   const introAllowed = React.useContext(IntroAllowedContext);
 
@@ -131,7 +169,7 @@ function MediaPlane({
 
     if (absDepth > DEPTH_FADE_END + 50) {
       state.opacity = 0;
-      material.opacity = 0;
+      material.uniforms.opacity.value = 0;
       material.depthWrite = false;
       mesh.visible = false;
       return;
@@ -164,7 +202,7 @@ function MediaPlane({
 
     const finalOpacity = state.opacity * introFactor;
     const isFullyOpaque = finalOpacity > 0.99;
-    material.opacity = isFullyOpaque ? 1 : finalOpacity;
+    material.uniforms.opacity.value = isFullyOpaque ? 1 : finalOpacity;
     material.depthWrite = isFullyOpaque;
     mesh.visible = finalOpacity > INVIS_THRESHOLD;
 
@@ -193,9 +231,9 @@ function MediaPlane({
 
     const material = materialRef.current;
     if (material) {
-      material.opacity = 0;
+      material.uniforms.opacity.value = 0;
       material.depthWrite = false;
-      material.map = null;
+      material.uniforms.map.value = null;
     }
 
     const tex = getTexture(media, () => {
@@ -217,8 +255,8 @@ function MediaPlane({
 
     if (!material || !mesh || !texture || !isReady || !state.ready) return;
 
-    material.map = texture;
-    material.opacity = state.opacity;
+    material.uniforms.map.value = texture;
+    material.uniforms.opacity.value = state.opacity;
     material.depthWrite = state.opacity >= 1;
     mesh.scale.copy(displayScale);
   }, [displayScale, texture, isReady]);
@@ -233,11 +271,10 @@ function MediaPlane({
       visible={false}
       geometry={PLANE_GEOMETRY}
     >
-      <meshBasicMaterial
+      <primitive
         ref={materialRef}
-        transparent
-        opacity={0}
-        side={THREE.DoubleSide}
+        object={shaderMaterial}
+        attach="material"
       />
     </mesh>
   );
@@ -400,10 +437,15 @@ function SceneController({
       }
     };
 
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      s.scrollAccum += e.deltaY * 0.006;
+    // Single global wheel handler — drives camera in both directions everywhere on the page
+    const onGlobalWheel = (e: WheelEvent) => {
+      s.scrollAccum += e.deltaY * 0.008;
+      // When at the top (canvas visible), push the page down on scroll-down
+      if (e.deltaY > 0 && window.scrollY === 0) {
+        window.scrollBy(0, e.deltaY);
+      }
     };
+    window.addEventListener("wheel", onGlobalWheel, { passive: true });
 
     const onTouchStart = (e: TouchEvent) => {
       e.preventDefault();
@@ -442,7 +484,6 @@ function SceneController({
     window.addEventListener("mouseup", onMouseUp);
     window.addEventListener("mousemove", onMouseMove);
     canvas.addEventListener("mouseleave", onMouseLeave);
-    canvas.addEventListener("wheel", onWheel, { passive: false });
     canvas.addEventListener("touchstart", onTouchStart, { passive: false });
     canvas.addEventListener("touchmove", onTouchMove, { passive: false });
     canvas.addEventListener("touchend", onTouchEnd, { passive: false });
@@ -452,7 +493,7 @@ function SceneController({
       window.removeEventListener("mouseup", onMouseUp);
       window.removeEventListener("mousemove", onMouseMove);
       canvas.removeEventListener("mouseleave", onMouseLeave);
-      canvas.removeEventListener("wheel", onWheel);
+      window.removeEventListener("wheel", onGlobalWheel);
       canvas.removeEventListener("touchstart", onTouchStart);
       canvas.removeEventListener("touchmove", onTouchMove);
       canvas.removeEventListener("touchend", onTouchEnd);

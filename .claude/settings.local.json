@@ -10,7 +10,10 @@
       "Bash(mkdir -p public/images)",
       "Bash(cp asset/images/* public/images/)",
       "Read(//Users/haywire/Documents/wired/**)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(cd:*)",
+      "Bash(for f:*)",
+      "Bash(do sips:*)"
     ]
   }
 }
